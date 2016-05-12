@@ -1,0 +1,3 @@
+[submodule "deps/Cinder-3DConnexion"]
+	path = deps/Cinder-3DConnexion
+	url = https://github.com/heisters/Cinder-3DConnexion.git
