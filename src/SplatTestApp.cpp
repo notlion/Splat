@@ -11,11 +11,12 @@
 using namespace ci;
 using namespace ci::app;
 
-static const size_t kMaxParticles = 1024 * 1024;
+static const size_t kMaxParticles = glm::pow(2 << 9, 2);
 
 class SplatTestApp : public App {
   gl::GlslProgRef particleSimProg;
   gl::BatchRef particleBatch;
+  gl::TextureRef particleTexture;
 
   connexion::DeviceRef spaceNav;
 
@@ -65,6 +66,11 @@ void SplatTestApp::setup() {
 
     particleBatch = gl::Batch::create(mesh, prog);
   }
+
+  {
+    auto fmt = gl::Texture::Format().mipmap();
+    particleTexture = gl::Texture::create(loadImage(loadAsset("splat_0.png")), fmt);
+  }
 }
 
 void SplatTestApp::cleanup() {
@@ -90,9 +96,14 @@ void SplatTestApp::update() {
 
 void SplatTestApp::draw() {
   gl::clear(Color(0, 0, 0));
+  gl::enableDepth(false);
+  gl::enableAlphaBlendingPremult();
+  gl::enable(GL_PROGRAM_POINT_SIZE);
 
   gl::setMatrices(camera);
 
+  gl::ScopedTextureBind scopedTex(particleTexture);
+  particleBatch->getGlslProg()->uniform("texture", 0);
   particleBatch->getGlslProg()->uniform("time", float(getElapsedSeconds()));
   particleBatch->draw();
 }

@@ -9,10 +9,10 @@ out float depth;
 
 void main() {
   vec3 pos = ciPosition.xyz;
-  vec3 np = pos * 4.0f;
-  pos += vec3(sin(np.x + time * 0.423),
-  			  sin(np.y + time * 0.437),
-  			  sin(np.z + time * 0.453)) * 0.25;
+  vec3 np = pos * 10.0f;
+  pos += vec3(sin(np.y + time * 0.423),
+              sin(np.z + time * 0.537),
+              sin(np.x + time * 0.653)) * 0.1;
 
   vec4 viewPos = ciModelView * vec4(pos.xyz, 1.0);
   float viewDist = length(viewPos.xyz);
