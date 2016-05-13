@@ -1,11 +1,12 @@
-#include "cinder/CameraUi.h"
 #include "cinder/Log.h"
 #include "cinder/Rand.h"
+#include "cinder/Vector.h"
 #include "cinder/app/App.h"
 #include "cinder/app/RendererGl.h"
 #include "cinder/gl/gl.h"
 
 #include "3DConnexion.h"
+#include "BodyCam.hpp"
 
 using namespace ci;
 using namespace ci::app;
@@ -19,6 +20,8 @@ class SplatTestApp : public App {
   connexion::DeviceRef spaceNav;
 
   CameraPersp camera;
+  Body3 cameraBody;
+  vec3 cameraTranslation, cameraRotation;
 
 public:
   void setup() override;
@@ -32,19 +35,15 @@ void SplatTestApp::setup() {
   camera.setEyePoint(vec3(0.0f, 0.0f, -5.0f));
   camera.setViewDirection(vec3(0.0f, 0.0f, 1.0f));
 
+  cameraBody = Body3(camera);
+
   {
     connexion::Device::initialize(getRenderer()->getHwnd());
     auto id = connexion::Device::getAllDeviceIds().front();
     spaceNav = connexion::Device::create(id);
-    spaceNav->getMotionSignal().connect([=](const connexion::MotionEvent &event) {
-      auto ori = camera.getOrientation();
-      auto pos = camera.getEyePoint();
-
-      pos += glm::rotate(ori, event.translation * (vec3(1, 1, -1) * 0.00015f));
-      ori *= quat(event.rotation * (vec3(1, 1, -1) * 0.0001f));
-
-      camera.setEyePoint(pos);
-      camera.setOrientation(ori);
+    spaceNav->getMotionSignal().connect([this](const connexion::MotionEvent &event) {
+      cameraTranslation = event.translation;
+      cameraRotation = event.rotation;
     });
   }
 
@@ -78,6 +77,15 @@ void SplatTestApp::resize() {
 
 void SplatTestApp::update() {
   spaceNav->update();
+
+  {
+    const auto &ori = cameraBody.orientation;
+    cameraBody.impulse = glm::rotate(ori, cameraTranslation * vec3(1, 1, -1)) * 0.000015f;
+    cameraBody.angularImpulse = quat(cameraRotation * vec3(1, 1, -1) * 0.000005f);
+  }
+
+  cameraBody.step();
+  cameraBody.applyTransform(camera);
 }
 
 void SplatTestApp::draw() {

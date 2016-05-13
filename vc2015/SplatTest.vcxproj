@@ -192,12 +192,12 @@
   <ItemGroup />
   <ItemGroup>
     <ClCompile Include="..\deps\Cinder-3DConnexion\src\3DConnexion.cpp" />
-    <ClCompile Include="..\src\SpaceNav.cpp" />
+    <ClCompile Include="..\src\BodyCam.cpp" />
     <ClCompile Include="..\src\SplatTestApp.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\BodyCam.hpp" />
     <ClInclude Include="..\include\Resources.h" />
-    <ClInclude Include="..\include\SpaceNav.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

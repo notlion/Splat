@@ -27,18 +27,18 @@
     <ClInclude Include="..\include\Resources.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClCompile Include="..\src\SpaceNav.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\deps\Cinder-3DConnexion\src\3DConnexion.cpp">
       <Filter>Source Files\Deps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\BodyCam.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\Resources.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\SpaceNav.hpp">
+    <ClInclude Include="..\include\BodyCam.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
