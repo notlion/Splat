@@ -7,16 +7,24 @@
 
 #include "3DConnexion.h"
 #include "BodyCam.hpp"
+#include "Sort.hpp"
 
 using namespace ci;
 using namespace ci::app;
 
-static const size_t kMaxParticles = glm::pow(2 << 9, 2);
+static constexpr uint32_t sqr(uint32_t x) {
+  return x * x;
+}
+
+static const uint32_t kMaxParticles = sqr(2 << 9);
 
 class SplatTestApp : public App {
   gl::GlslProgRef particleSimProg;
   gl::BatchRef particleBatch;
   gl::TextureRef particleTexture;
+  gl::BufferObjRef particlePositionBuffer;
+
+  std::shared_ptr<RadixSort> radixSort;
 
   connexion::DeviceRef spaceNav;
 
@@ -48,6 +56,17 @@ void SplatTestApp::setup() {
     });
   }
 
+  radixSort = std::make_shared<RadixSort>(kMaxParticles, 128);
+
+  {
+    auto positions = std::unique_ptr<vec4[]>(new vec4[kMaxParticles]);
+    for (size_t i = 0; i < kMaxParticles; ++i) {
+      positions[i] = vec4(ci::Rand::randVec3(), 0.0f);
+    }
+    particlePositionBuffer = gl::BufferObj::create(
+        GL_SHADER_STORAGE_BUFFER, kMaxParticles * sizeof(vec4), positions.get(), GL_DYNAMIC_COPY);
+  }
+
   {
     auto progFmt = gl::GlslProg::Format()
                        .vertex(loadAsset("render_vs.glsl"))
@@ -57,12 +76,7 @@ void SplatTestApp::setup() {
     auto meshLayout =
         gl::VboMesh::Layout().usage(GL_DYNAMIC_DRAW).attrib(geom::Attrib::POSITION, 4);
     auto mesh = gl::VboMesh::create(kMaxParticles, GL_POINTS, {meshLayout});
-
-    auto positions = std::unique_ptr<vec4[]>(new vec4[kMaxParticles]);
-    for (size_t i = 0; i < kMaxParticles; ++i) {
-      positions[i] = vec4(ci::Rand::randVec3(), 0.0f);
-    }
-    mesh->bufferAttrib(geom::Attrib::POSITION, kMaxParticles * sizeof(vec4), positions.get());
+    mesh->bufferAttrib(geom::Attrib::POSITION, kMaxParticles * sizeof(vec4), nullptr);
 
     particleBatch = gl::Batch::create(mesh, prog);
   }
@@ -86,16 +100,27 @@ void SplatTestApp::update() {
 
   {
     const auto &ori = cameraBody.orientation;
-    cameraBody.impulse = glm::rotate(ori, cameraTranslation * vec3(1, 1, -1)) * 0.000015f;
-    cameraBody.angularImpulse = quat(cameraRotation * vec3(1, 1, -1) * 0.000005f);
+    cameraBody.impulse = glm::rotate(ori, cameraTranslation * vec3(1, 1, -1)) * 0.00001f;
+    cameraBody.angularImpulse = quat(cameraRotation * vec3(1, 1, -1) * 0.00000333f);
   }
 
   cameraBody.step();
   cameraBody.applyTransform(camera);
+
+  {
+    auto inputId = particlePositionBuffer->getId();
+    auto outputAttrib = particleBatch->getVboMesh()->findAttrib(geom::Attrib::POSITION);
+    if (outputAttrib) {
+      auto outputId = outputAttrib->second->getId();
+      radixSort->sort(inputId, outputId, -camera.getViewDirection(), camera.getNearClip(),
+                      camera.getFarClip());
+    }
+  }
 }
 
 void SplatTestApp::draw() {
   gl::clear(Color(0, 0, 0));
+
   gl::enableDepth(false);
   gl::enableAlphaBlendingPremult();
   gl::enable(GL_PROGRAM_POINT_SIZE);

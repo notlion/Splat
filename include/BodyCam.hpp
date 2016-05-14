@@ -11,8 +11,8 @@ struct Body3 {
   ci::quat orientation, orientationPrev;
   ci::quat angularImpulse;
 
-  float friction = 0.05f;
-  float angularFriction = 0.05f;
+  float friction = 0.02f;
+  float angularFriction = 0.02f;
 
   Body3() = default;
   Body3(const ci::vec3 &pos, const ci::quat &ori)
