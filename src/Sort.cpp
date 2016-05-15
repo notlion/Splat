@@ -146,9 +146,6 @@ void RadixSort::sort(GLuint inputBufId, GLuint outputBufId, const vec3 &axis, fl
 
   for (uint32_t i = 1; i < 8; ++i) {
     sortBits(inputBufId, outputBufId, i * 2, axis, zMin, zMax);
-
-    // Swap for the next digit stage
-    // The <buf_input> buffer will in the end hold the latest sorted data
     std::swap(inputBufId, outputBufId);
   }
 
