@@ -3,6 +3,7 @@
 
 #include "Sort.hpp"
 
+#include "cinder/Log.h"
 #include "cinder/app/App.h"
 #include "cinder/gl/gl.h"
 
@@ -27,6 +28,8 @@ RadixSort::RadixSort(uint32_t elemCount, uint32_t blockSize)
     }
   }
 
+  sortedBuffer = gl::BufferObj::create(GL_SHADER_STORAGE_BUFFER, elemCount * sizeof(vec4), nullptr,
+                                       GL_DYNAMIC_COPY);
   flagsBuffer = gl::BufferObj::create(GL_SHADER_STORAGE_BUFFER, elemCount * sizeof(GLuint), nullptr,
                                       GL_DYNAMIC_COPY);
 
@@ -136,7 +139,12 @@ void RadixSort::sortBits(GLuint inputBufId, GLuint outputBufId, int bitOffset, c
 
 void RadixSort::sort(GLuint inputBufId, GLuint outputBufId, const vec3 &axis, float zMin,
                      float zMax) {
-  for (uint32_t i = 0; i < 8; ++i) {
+  GLuint sortedBufId = sortedBuffer->getId();
+
+  sortBits(inputBufId, sortedBufId, 0, axis, zMin, zMax);
+  std::swap(inputBufId, sortedBufId);
+
+  for (uint32_t i = 1; i < 8; ++i) {
     sortBits(inputBufId, outputBufId, i * 2, axis, zMin, zMax);
 
     // Swap for the next digit stage

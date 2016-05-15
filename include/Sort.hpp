@@ -5,9 +5,10 @@
 #include <vector>
 
 class RadixSort {
+public:
   ci::gl::GlslProgRef scanProg, scanFirstProg, resolveProg, reorderProg;
 
-  ci::gl::BufferObjRef flagsBuffer;
+  ci::gl::BufferObjRef sortedBuffer, flagsBuffer;
   std::vector<ci::gl::BufferObjRef> scanBuffers, sumBuffers;
 
   uint32_t elemCount, blockSize, scanLevelCount;
