@@ -85,17 +85,6 @@ void SplatTestApp::setup() {
     particlePositions = gl::BufferObj::create(
         GL_SHADER_STORAGE_BUFFER, kMaxParticles * sizeof(vec4), positions.get(), GL_DYNAMIC_COPY);
 
-    // mesh->bufferAttrib(geom::Attrib::POSITION, kMaxParticles * sizeof(vec4), positions.get());
-
-    // auto positionLayout = geom::BufferLayout();
-    // positionLayout.append(geom::Attrib::POSITION, 4, 0, 0);
-
-    // auto mesh = gl::VboMesh::create(
-    //     kMaxParticles, GL_POINTS,
-    //     {{positionLayout,
-    //       gl::Vbo::create(GL_ARRAY_BUFFER, kMaxParticles * sizeof(vec4),
-    //       positions.get())}});
-
     particleBatch = gl::Batch::create(mesh, prog);
   }
 }
@@ -145,6 +134,7 @@ void SplatTestApp::draw() {
   {
     gl::ScopedTextureBind scopedTex(particleTexture);
     particleBatch->getGlslProg()->uniform("texture", 0);
+    particleBatch->getGlslProg()->uniform("pointSize", getWindowHeight() / 100.0f);
     particleBatch->getGlslProg()->uniform("time", float(getElapsedSeconds()));
     particleBatch->draw();
   }
