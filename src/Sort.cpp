@@ -2,6 +2,7 @@
 // http://malideveloper.arm.com/resources/sample-code/particle-flow-simulation-compute-shaders/
 
 #include "Sort.hpp"
+#include "Particle.hpp"
 
 #include "cinder/Log.h"
 #include "cinder/app/App.h"
@@ -28,10 +29,8 @@ RadixSort::RadixSort(uint32_t elemCount, uint32_t blockSize)
     }
   }
 
-  sortedBuffer = gl::BufferObj::create(GL_SHADER_STORAGE_BUFFER, elemCount * sizeof(vec4), nullptr,
-                                       GL_DYNAMIC_COPY);
-  flagsBuffer = gl::BufferObj::create(GL_SHADER_STORAGE_BUFFER, elemCount * sizeof(GLuint), nullptr,
-                                      GL_DYNAMIC_COPY);
+  sortedBuffer = gl::Ssbo::create(elemCount * sizeof(Particle), nullptr, GL_DYNAMIC_COPY);
+  flagsBuffer = gl::Ssbo::create(elemCount * sizeof(GLuint), nullptr, GL_DYNAMIC_COPY);
 
   {
     scanBuffers.reserve(scanLevelCount);
@@ -39,13 +38,11 @@ RadixSort::RadixSort(uint32_t elemCount, uint32_t blockSize)
 
     uint32_t blockCount = elemCount / blockSize;
     for (uint32_t i = 0; i < scanLevelCount; ++i) {
-      scanBuffers.push_back(gl::BufferObj::create(GL_SHADER_STORAGE_BUFFER,
-                                                  blockCount * blockSize * 4 * sizeof(GLuint),
-                                                  nullptr, GL_DYNAMIC_COPY));
+      scanBuffers.push_back(
+          gl::Ssbo::create(blockCount * blockSize * 4 * sizeof(GLuint), nullptr, GL_DYNAMIC_COPY));
       blockCount = (blockCount + blockSize - 1) / blockSize;
-      sumBuffers.push_back(gl::BufferObj::create(GL_SHADER_STORAGE_BUFFER,
-                                                 blockCount * blockSize * 4 * sizeof(GLuint),
-                                                 nullptr, GL_DYNAMIC_COPY));
+      sumBuffers.push_back(
+          gl::Ssbo::create(blockCount * blockSize * 4 * sizeof(GLuint), nullptr, GL_DYNAMIC_COPY));
     }
   }
 }
@@ -135,6 +132,12 @@ void RadixSort::sortBits(GLuint inputBufId, GLuint outputBufId, int bitOffset, c
     glDispatchCompute(elemCount / blockSize, 1, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
   }
+
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, 0);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, 0);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, 0);
 }
 
 void RadixSort::sort(GLuint inputBufId, GLuint outputBufId, const vec3 &axis, float zMin,

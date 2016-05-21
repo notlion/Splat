@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cinder/gl/GlslProg.h"
+#include "cinder/gl/Ssbo.h"
 
 #include <vector>
 
@@ -8,8 +9,8 @@ class RadixSort {
 public:
   ci::gl::GlslProgRef scanProg, scanFirstProg, resolveProg, reorderProg;
 
-  ci::gl::BufferObjRef sortedBuffer, flagsBuffer;
-  std::vector<ci::gl::BufferObjRef> scanBuffers, sumBuffers;
+  ci::gl::SsboRef sortedBuffer, flagsBuffer;
+  std::vector<ci::gl::SsboRef> scanBuffers, sumBuffers;
 
   uint32_t elemCount, blockSize, scanLevelCount;
 

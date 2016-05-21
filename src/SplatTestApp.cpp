@@ -3,11 +3,15 @@
 #include "cinder/Vector.h"
 #include "cinder/app/App.h"
 #include "cinder/app/RendererGl.h"
+#include "cinder/gl/Ssbo.h"
 #include "cinder/gl/gl.h"
 
 #include "3DConnexion.h"
 #include "BodyCam.hpp"
+#include "Particle.hpp"
 #include "Sort.hpp"
+
+#include <numeric>
 
 using namespace ci;
 using namespace ci::app;
@@ -16,15 +20,17 @@ static constexpr uint32_t sqr(uint32_t x) {
   return x * x;
 }
 
-static const uint32_t kMaxParticles = sqr(2 << 10);
-static const uint32_t kWorkGroupSizeX = 64;
+static const uint32_t kMaxParticles = sqr(2 << 9);
+static const uint32_t kWorkGroupSizeX = 128;
 
 
 class SplatTestApp : public App {
-  gl::GlslProgRef particleSimProg;
-  gl::BatchRef particleBatch;
   gl::TextureRef particleTexture;
-  gl::BufferObjRef particlePositions, particlePositionsPrev;
+
+  gl::GlslProgRef particleUpdateProg, particleRenderProg;
+  gl::VboRef particleIds;
+  gl::VaoRef particleAttrs;
+  gl::SsboRef particles, particlesSorted;
 
   std::shared_ptr<RadixSort> radixSort;
 
@@ -75,33 +81,38 @@ void SplatTestApp::setup() {
                    .preprocess(true)
                    .define("WORK_GROUP_SIZE_X", std::to_string(kWorkGroupSizeX))
                    .define("PARTICLE_COUNT", std::to_string(kMaxParticles));
-    particleSimProg = gl::GlslProg::create(fmt);
+    particleUpdateProg = gl::GlslProg::create(fmt);
   }
 
   {
-    auto progFmt = gl::GlslProg::Format()
-                       .vertex(loadAsset("render_vs.glsl"))
-                       .fragment(loadAsset("render_fs.glsl"));
-    auto prog = gl::GlslProg::create(progFmt);
+    auto fmt = gl::GlslProg::Format()
+                   .vertex(loadAsset("render_vs.glsl"))
+                   .fragment(loadAsset("render_fs.glsl"))
+                   .attribLocation("particleId", 0);
+    particleRenderProg = gl::GlslProg::create(fmt);
+  }
 
-    auto meshLayout =
-        gl::VboMesh::Layout().usage(GL_DYNAMIC_DRAW).attrib(geom::Attrib::POSITION, 4);
-    auto mesh = gl::VboMesh::create(kMaxParticles, GL_POINTS, {meshLayout});
+  {
+    std::vector<GLuint> ids(kMaxParticles);
+    std::iota(ids.begin(), ids.end(), 0);
+    particleIds = gl::Vbo::create(GL_ARRAY_BUFFER, ids, GL_STATIC_DRAW);
 
-    {
-      auto positions = std::unique_ptr<vec4[]>(new vec4[kMaxParticles]);
-      for (size_t i = 0; i < kMaxParticles; ++i) {
-        positions[i] = vec4(ci::Rand::randVec3(), 0.0f);
-      }
+    particleAttrs = gl::Vao::create();
+    gl::ScopedVao scopedVao(particleAttrs);
+    gl::ScopedBuffer scopedIds(particleIds);
+    gl::enableVertexAttribArray(0);
+    gl::vertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
+  }
 
-      auto bufferSize = kMaxParticles * sizeof(vec4);
-      particlePositions = gl::BufferObj::create(GL_SHADER_STORAGE_BUFFER, bufferSize,
-                                                positions.get(), GL_DYNAMIC_COPY);
-      particlePositionsPrev = gl::BufferObj::create(GL_SHADER_STORAGE_BUFFER, bufferSize,
-                                                    positions.get(), GL_DYNAMIC_COPY);
+  {
+    auto initParticles = std::unique_ptr<Particle[]>(new Particle[kMaxParticles]);
+    for (size_t i = 0; i < kMaxParticles; ++i) {
+      initParticles[i] = {ci::Rand::randVec3(), 1.0f, vec4(1.0)};
     }
 
-    particleBatch = gl::Batch::create(mesh, prog);
+    auto bufferSize = kMaxParticles * sizeof(Particle);
+    particles = gl::Ssbo::create(bufferSize, initParticles.get(), GL_STATIC_DRAW);
+    particlesSorted = gl::Ssbo::create(bufferSize, nullptr, GL_STATIC_DRAW);
   }
 }
 
@@ -130,23 +141,20 @@ void SplatTestApp::update() {
   cameraBody.applyTransform(camera);
 
   {
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particlePositions->getId());
+    particles->bindBase(0);
 
-    particleSimProg->bind();
-    particleSimProg->uniform("time", float(getElapsedSeconds()));
+    particleUpdateProg->bind();
+    particleUpdateProg->uniform("time", float(getElapsedSeconds()));
 
     glDispatchCompute(kMaxParticles / kWorkGroupSizeX, 1, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
+    particles->unbindBase();
   }
 
   {
-    auto outputAttrib = particleBatch->getVboMesh()->findAttrib(geom::Attrib::POSITION);
-    if (outputAttrib) {
-      radixSort->sort(particlePositions->getId(), outputAttrib->second->getId(),
-                      -camera.getViewDirection(), -2.0f, 2.0f);
-    }
+    radixSort->sort(particles->getId(), particlesSorted->getId(), -camera.getViewDirection(), -2.0f,
+                    2.0f);
   }
 }
 
@@ -161,10 +169,17 @@ void SplatTestApp::draw() {
 
   {
     gl::ScopedTextureBind scopedTex(particleTexture);
-    particleBatch->getGlslProg()->uniform("texture", 0);
-    particleBatch->getGlslProg()->uniform("pointSize", getWindowHeight() / 100.0f);
-    particleBatch->getGlslProg()->uniform("time", float(getElapsedSeconds()));
-    particleBatch->draw();
+    gl::ScopedGlslProg scopedProg(particleRenderProg);
+    gl::ScopedVao scopedVao(particleAttrs);
+
+    gl::context()->setDefaultShaderVars();
+
+    particleRenderProg->uniform("texture", 0);
+    particleRenderProg->uniform("pointSize", getWindowHeight() / 100.0f);
+
+    particlesSorted->bindBase(0);
+    gl::drawArrays(GL_POINTS, 0, kMaxParticles);
+    particlesSorted->unbindBase();
   }
 }
 

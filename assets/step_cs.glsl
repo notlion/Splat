@@ -1,8 +1,14 @@
 #version 430 core
 
+struct Particle {
+  vec3 position;
+  float scale;
+  vec4 color;
+};
+
 layout(local_size_x = WORK_GROUP_SIZE_X) in;
-layout(std140, binding = 0) buffer PositionBuffer {
-  vec4 position[];
+layout(std140, binding = 0) buffer ParticleBuffer {
+  Particle particle[];
 };
 
 uniform float time;
@@ -20,5 +26,9 @@ void main() {
   uint index = gl_GlobalInvocationID.x;
   float t = float(index) / PARTICLE_COUNT;
 
-  position[index].xyz = hash31(t);
+  particle[index].position = hash31(t);
+
+  float wave = (sin(time + particle[index].position.z * kTwoPi * 2.0) + 1.0) * 0.5;
+  particle[index].color.rgb = vec3(wave);
+  particle[index].scale = wave * 1.5 + 0.5;
 }

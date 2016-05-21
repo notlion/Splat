@@ -42,10 +42,14 @@
  * So the first element should be reordered to position 2 in the sorted array.
  */
 
+struct Particle {
+    vec4 pos, rest;
+};
+
 layout(local_size_x = 32) in; // We work on 4 items at once, so this value should be BLOCK_SIZE / 4.
 layout(binding = 0, std430) readonly buffer SortData
 {
-    vec4 sort_buf[];
+    Particle sort_buf[];
 };
 
 layout(binding = 1, std430) readonly buffer Data
@@ -60,7 +64,7 @@ layout(binding = 2, std430) readonly buffer BlockSumData
 
 layout(binding = 3, std430) writeonly buffer OutSortData
 {
-    vec4 out_sort_buf[];
+    Particle out_sort_buf[];
 };
 
 layout(binding = 4, std430) readonly buffer FlagsData

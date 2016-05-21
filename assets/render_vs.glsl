@@ -1,19 +1,30 @@
+#version 430 core
+
 uniform mat4 ciModelView, ciProjectionMatrix;
-uniform float time, pointSize;
+uniform float pointSize;
 
-in vec4 ciPosition;
+struct Particle {
+  vec3 position;
+  float scale;
+  vec4 color;
+};
 
-const float scale = 0.85;
+layout(location = 0) in uint particleId;
+layout(std140, binding = 0) buffer Particles {
+  Particle particle[];
+};
 
-out vec3 color;
+out vec4 color;
 
 void main() {
-  vec4 viewPos = ciModelView * vec4(ciPosition.xyz, 1.0);
+  vec4 viewPos = ciModelView * vec4(particle[particleId].position, 1.0);
   float viewDist = length(viewPos.xyz);
 
-  gl_PointSize = pointSize / viewDist;
+  gl_PointSize = (pointSize / viewDist) * particle[particleId].scale;
   gl_Position = ciProjectionMatrix * viewPos;
 
-  color = vec3((sin(time + ciPosition.z * 6.0) + 1.0) * 0.5);
-  color *= 1.0 - gl_Position.z * 0.2;
+  color = particle[particleId].color;
+
+  // TEMP: Slight fog
+  color.rgb *= 1.0 - gl_Position.z * 0.2;
 }

@@ -91,11 +91,15 @@
  * The difference between these is trivially resolved in scan_reorder.cs.
  */
 
+struct Particle {
+    vec4 pos, rest;
+};
+
 layout(local_size_x = 32) in; // We work on 4 items at once, so this value should be BLOCK_SIZE / 4.
 #define NUM_STEPS 4u
 layout(binding = 0, std430) readonly buffer Data
 {
-    vec4 in_points[];
+    Particle in_points[];
 };
 
 layout(binding = 1, std430) writeonly buffer OutData
@@ -132,10 +136,10 @@ uniform float zMax;
 uvec4 decodeKeys(uint index)
 {
     vec4 z = vec4(
-            dot(in_points[4u * index + 0u].xyz, axis),
-            dot(in_points[4u * index + 1u].xyz, axis),
-            dot(in_points[4u * index + 2u].xyz, axis),
-            dot(in_points[4u * index + 3u].xyz, axis));
+            dot(in_points[4u * index + 0u].pos.xyz, axis),
+            dot(in_points[4u * index + 1u].pos.xyz, axis),
+            dot(in_points[4u * index + 2u].pos.xyz, axis),
+            dot(in_points[4u * index + 3u].pos.xyz, axis));
     z = 65535.0 * clamp((z - zMin) / (zMax - zMin), vec4(0.0), vec4(1.0));
     return bitfieldExtract(uvec4(z), bitOffset, 2);
 }
