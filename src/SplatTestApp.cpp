@@ -133,7 +133,7 @@ void SplatTestApp::update() {
 
   {
     const auto &ori = cameraBody.orientation;
-    cameraBody.impulse = glm::rotate(ori, cameraTranslation * vec3(1, 1, -1)) * 0.00001f;
+    cameraBody.impulse = glm::rotate(ori, cameraTranslation * vec3(1, 1, -1)) * 0.000005f;
     cameraBody.angularImpulse = quat(cameraRotation * vec3(1, 1, -1) * 0.00000333f);
   }
 
