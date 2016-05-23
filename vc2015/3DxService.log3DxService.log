@@ -1,0 +1,3 @@
+00002000 14:18:11.430: siappdll: __FILE__: .\src\appmmap.cpp,  __LINE__: 549, ErrorVal: -11
+00002000 14:18:11.433: siappdll: __FILE__: .\src\appsi.cpp,  __LINE__: 521, ErrorVal: 1
+00002000 14:18:11.435: siappdll: __FILE__: .\src\gtnumdev.cpp,  __LINE__: 45, ErrorVal: 11

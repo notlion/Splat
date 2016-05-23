@@ -5,12 +5,16 @@
 
 #include <vector>
 
+namespace splat {
+
+using namespace ci;
+
 class RadixSort {
 public:
-  ci::gl::GlslProgRef scanProg, scanFirstProg, resolveProg, reorderProg;
+  gl::GlslProgRef scanProg, scanFirstProg, resolveProg, reorderProg;
 
-  ci::gl::SsboRef sortedBuffer, flagsBuffer;
-  std::vector<ci::gl::SsboRef> scanBuffers, sumBuffers;
+  gl::SsboRef sortedBuffer, flagsBuffer;
+  std::vector<gl::SsboRef> scanBuffers, sumBuffers;
 
   uint32_t elemCount, blockSize, scanLevelCount;
 
@@ -22,3 +26,7 @@ public:
 
   void sort(GLuint inputBufId, GLuint outputBufId, const ci::vec3 &axis, float zMin, float zMax);
 };
+
+using RadixSortRef = std::shared_ptr<RadixSort>;
+
+} // splat

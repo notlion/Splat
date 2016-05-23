@@ -8,6 +8,8 @@
 #include "cinder/app/App.h"
 #include "cinder/gl/gl.h"
 
+namespace splat {
+
 using namespace ci;
 
 RadixSort::RadixSort(uint32_t elemCount, uint32_t blockSize)
@@ -156,3 +158,5 @@ void RadixSort::sort(GLuint inputBufId, GLuint outputBufId, const vec3 &axis, fl
   // Thus we need to ensure that the data is up to date
   glMemoryBarrier(GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
 }
+
+} // splat

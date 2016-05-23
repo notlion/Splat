@@ -8,31 +8,18 @@
 
 #include "3DConnexion.h"
 #include "BodyCam.hpp"
-#include "Particle.hpp"
-#include "Sort.hpp"
+#include "ParticleSys.hpp"
 
-#include <numeric>
 
 using namespace ci;
 using namespace ci::app;
 
-static constexpr uint32_t sqr(uint32_t x) {
-  return x * x;
-}
 
-static const uint32_t kMaxParticles = sqr(2 << 9);
-static const uint32_t kWorkGroupSizeX = 128;
+namespace splat {
 
 
 class SplatTestApp : public App {
-  gl::TextureRef particleTexture;
-
-  gl::GlslProgRef particleUpdateProg, particleRenderProg;
-  gl::VboRef particleIds;
-  gl::VaoRef particleAttrs;
-  gl::SsboRef particles, particlesSorted;
-
-  std::shared_ptr<RadixSort> radixSort;
+  std::unique_ptr<ParticleSys> particleSys;
 
   connexion::DeviceRef spaceNav;
 
@@ -68,52 +55,7 @@ void SplatTestApp::setup() {
     }
   }
 
-  radixSort = std::make_shared<RadixSort>(kMaxParticles, 128);
-
-  {
-    auto fmt = gl::Texture::Format().mipmap();
-    particleTexture = gl::Texture::create(loadImage(loadAsset("splat_0.png")), fmt);
-  }
-
-  {
-    auto fmt = gl::GlslProg::Format()
-                   .compute(loadAsset("step_cs.glsl"))
-                   .preprocess(true)
-                   .define("WORK_GROUP_SIZE_X", std::to_string(kWorkGroupSizeX))
-                   .define("PARTICLE_COUNT", std::to_string(kMaxParticles));
-    particleUpdateProg = gl::GlslProg::create(fmt);
-  }
-
-  {
-    auto fmt = gl::GlslProg::Format()
-                   .vertex(loadAsset("render_vs.glsl"))
-                   .fragment(loadAsset("render_fs.glsl"))
-                   .attribLocation("particleId", 0);
-    particleRenderProg = gl::GlslProg::create(fmt);
-  }
-
-  {
-    std::vector<GLuint> ids(kMaxParticles);
-    std::iota(ids.begin(), ids.end(), 0);
-    particleIds = gl::Vbo::create(GL_ARRAY_BUFFER, ids, GL_STATIC_DRAW);
-
-    particleAttrs = gl::Vao::create();
-    gl::ScopedVao scopedVao(particleAttrs);
-    gl::ScopedBuffer scopedIds(particleIds);
-    gl::enableVertexAttribArray(0);
-    gl::vertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), nullptr);
-  }
-
-  {
-    auto initParticles = std::unique_ptr<Particle[]>(new Particle[kMaxParticles]);
-    for (size_t i = 0; i < kMaxParticles; ++i) {
-      initParticles[i] = {ci::Rand::randVec3(), 1.0f, vec4(1.0)};
-    }
-
-    auto bufferSize = kMaxParticles * sizeof(Particle);
-    particles = gl::Ssbo::create(bufferSize, initParticles.get(), GL_STATIC_DRAW);
-    particlesSorted = gl::Ssbo::create(bufferSize, nullptr, GL_STATIC_DRAW);
-  }
+  particleSys = std::make_unique<ParticleSys>();
 }
 
 void SplatTestApp::cleanup() {
@@ -140,22 +82,7 @@ void SplatTestApp::update() {
   cameraBody.step();
   cameraBody.applyTransform(camera);
 
-  {
-    particles->bindBase(0);
-
-    particleUpdateProg->bind();
-    particleUpdateProg->uniform("time", float(getElapsedSeconds()));
-
-    glDispatchCompute(kMaxParticles / kWorkGroupSizeX, 1, 1);
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-
-    particles->unbindBase();
-  }
-
-  {
-    radixSort->sort(particles->getId(), particlesSorted->getId(), -camera.getViewDirection(), -2.0f,
-                    2.0f);
-  }
+  particleSys->update(getElapsedSeconds(), camera.getViewDirection());
 }
 
 void SplatTestApp::draw() {
@@ -167,20 +94,7 @@ void SplatTestApp::draw() {
 
   gl::setMatrices(camera);
 
-  {
-    gl::ScopedTextureBind scopedTex(particleTexture);
-    gl::ScopedGlslProg scopedProg(particleRenderProg);
-    gl::ScopedVao scopedVao(particleAttrs);
-
-    gl::context()->setDefaultShaderVars();
-
-    particleRenderProg->uniform("texture", 0);
-    particleRenderProg->uniform("pointSize", getWindowHeight() / 100.0f);
-
-    particlesSorted->bindBase(0);
-    gl::drawArrays(GL_POINTS, 0, kMaxParticles);
-    particlesSorted->unbindBase();
-  }
+  particleSys->draw(getWindowHeight() / 100.0f);
 }
 
 
@@ -197,8 +111,11 @@ void SplatTestApp::keyDown(KeyEvent event) {
 }
 
 
+} // splat
+
+
 static void prepareSettings(App::Settings *settings) {
   settings->setWindowSize(1280, 720);
 }
 
-CINDER_APP(SplatTestApp, RendererGl, prepareSettings)
+CINDER_APP(splat::SplatTestApp, RendererGl, prepareSettings)

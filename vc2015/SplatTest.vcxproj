@@ -79,7 +79,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\include;"..\..\..\frameworks\Cinder\include"</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;..\deps\Watchdog\include;..\deps\Cinder-3DConnexion\include;..\deps\3DxWare SDK\Inc;..\..\..\frameworks\Cinder\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_WIN32_WINNT=0x0601;_WINDOWS;NOMINMAX;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -106,7 +106,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\include;..\deps\Cinder-3DConnexion\include;..\deps\3DxWare SDK\Inc;..\..\..\frameworks\Cinder\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;..\deps\Watchdog\include;..\deps\Cinder-3DConnexion\include;..\deps\3DxWare SDK\Inc;..\..\..\frameworks\Cinder\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_WIN32_WINNT=0x0601;_WINDOWS;NOMINMAX;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -130,7 +130,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\include;"..\..\..\frameworks\Cinder\include"</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;..\deps\Watchdog\include;..\deps\Cinder-3DConnexion\include;..\deps\3DxWare SDK\Inc;..\..\..\frameworks\Cinder\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_WIN32_WINNT=0x0601;_WINDOWS;NOMINMAX;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader />
@@ -159,7 +159,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\include;..\deps\Cinder-3DConnexion\include;..\deps\3DxWare SDK\Inc;..\..\..\frameworks\Cinder\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;..\deps\Watchdog\include;..\deps\Cinder-3DConnexion\include;..\deps\3DxWare SDK\Inc;..\..\..\frameworks\Cinder\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_WIN32_WINNT=0x0601;_WINDOWS;NOMINMAX;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader />
@@ -193,11 +193,13 @@
   <ItemGroup>
     <ClCompile Include="..\deps\Cinder-3DConnexion\src\3DConnexion.cpp" />
     <ClCompile Include="..\src\BodyCam.cpp" />
+    <ClCompile Include="..\src\ParticleSys.cpp" />
     <ClCompile Include="..\src\Sort.cpp" />
     <ClCompile Include="..\src\SplatTestApp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\BodyCam.hpp" />
+    <ClInclude Include="..\include\ParticleSys.hpp" />
     <ClInclude Include="..\include\Resources.h" />
     <ClInclude Include="..\include\Sort.hpp" />
   </ItemGroup>
