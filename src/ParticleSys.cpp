@@ -2,6 +2,7 @@
 
 #include "cinder/ImageIo.h"
 #include "cinder/Rand.h"
+#include "cinder/Utilities.h"
 #include "cinder/app/App.h"
 
 #include <numeric>
@@ -22,15 +23,6 @@ ParticleSys::ParticleSys() {
   {
     auto fmt = gl::Texture::Format().mipmap();
     particleTexture = gl::Texture::create(loadImage(app::loadAsset("splat_0.png")), fmt);
-  }
-
-  {
-    auto fmt = gl::GlslProg::Format()
-                   .compute(app::loadAsset("step_cs.glsl"))
-                   .preprocess(true)
-                   .define("WORK_GROUP_SIZE_X", std::to_string(kWorkGroupSizeX))
-                   .define("PARTICLE_COUNT", std::to_string(kMaxParticles));
-    particleUpdateProg = gl::GlslProg::create(fmt);
   }
 
   {
@@ -67,7 +59,7 @@ ParticleSys::ParticleSys() {
 
 
 void ParticleSys::update(float time, const vec3 &viewDirection) {
-  {
+  if (particleUpdateProg) {
     particles->bindBase(0);
 
     particleUpdateProg->bind();
@@ -95,6 +87,16 @@ void ParticleSys::draw(float pointSize) {
   particlesSorted->bindBase(0);
   gl::drawArrays(GL_POINTS, 0, kMaxParticles);
   particlesSorted->unbindBase();
+}
+
+void ParticleSys::loadUpdateShaderMain(const fs::path &filepath) {
+  auto src = loadString(app::loadAsset("step_cs.glsl"));
+  auto fmt = gl::GlslProg::Format()
+                 .compute(src + "\n#include \"" + filepath.string() + "\"")
+                 .preprocess(true)
+                 .define("WORK_GROUP_SIZE_X", std::to_string(kWorkGroupSizeX))
+                 .define("PARTICLE_COUNT", std::to_string(kMaxParticles));
+  particleUpdateProg = gl::GlslProg::create(fmt);
 }
 
 } // splat

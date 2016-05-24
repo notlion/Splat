@@ -7,6 +7,8 @@
 #include "cinder/gl/gl.h"
 
 #include "3DConnexion.h"
+#include "Watchdog.h"
+
 #include "BodyCam.hpp"
 #include "ParticleSys.hpp"
 
@@ -20,6 +22,7 @@ namespace splat {
 
 class SplatTestApp : public App {
   std::unique_ptr<ParticleSys> particleSys;
+  fs::path particleUpdateMainFilepath;
 
   connexion::DeviceRef spaceNav;
 
@@ -56,6 +59,13 @@ void SplatTestApp::setup() {
   }
 
   particleSys = std::make_unique<ParticleSys>();
+  particleUpdateMainFilepath = getAssetPath("update_cs.glsl");
+  particleSys->loadUpdateShaderMain(particleUpdateMainFilepath);
+
+  wd::watch(particleUpdateMainFilepath, [this](const fs::path &filepath) {
+    CI_LOG_D("Reloading update shader: " << filepath);
+    particleSys->loadUpdateShaderMain(filepath);
+  });
 }
 
 void SplatTestApp::cleanup() {
