@@ -64,7 +64,11 @@ void SplatTestApp::setup() {
 
   wd::watch(particleUpdateMainFilepath, [this](const fs::path &filepath) {
     CI_LOG_D("Reloading update shader: " << filepath);
-    particleSys->loadUpdateShaderMain(filepath);
+    try {
+      particleSys->loadUpdateShaderMain(filepath);
+    } catch (const gl::GlslProgCompileExc &exc) {
+      CI_LOG_D(exc.what());
+    }
   });
 }
 

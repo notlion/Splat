@@ -13,7 +13,7 @@ void main() {
   uint index = gl_GlobalInvocationID.x;
   float t = float(index) / PARTICLE_COUNT;
 
-  particle[index].position = hash31(t);
+  particle[index].position = hash31(t) * 2.0 - 1.0;
 
   float wave = (sin(time + particle[index].position.z * kTwoPi * 2.0) + 1.0) * 0.5;
   particle[index].color.rgb = vec3(wave);

@@ -96,7 +96,9 @@ void ParticleSys::loadUpdateShaderMain(const fs::path &filepath) {
                  .preprocess(true)
                  .define("WORK_GROUP_SIZE_X", std::to_string(kWorkGroupSizeX))
                  .define("PARTICLE_COUNT", std::to_string(kMaxParticles));
-  particleUpdateProg = gl::GlslProg::create(fmt);
+  auto updateProg = gl::GlslProg::create(fmt);
+
+  particleUpdateProg = updateProg;
 }
 
 } // splat
