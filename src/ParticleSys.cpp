@@ -48,26 +48,32 @@ ParticleSys::ParticleSys() {
   {
     auto initParticles = std::unique_ptr<Particle[]>(new Particle[kMaxParticles]);
     for (size_t i = 0; i < kMaxParticles; ++i) {
-      initParticles[i] = {ci::Rand::randVec3(), 1.0f, vec4(1.0)};
+      initParticles[i] = {Rand::randVec3(), 1.0f, vec4(1.0)};
     }
 
     auto bufferSize = kMaxParticles * sizeof(Particle);
     particles = gl::Ssbo::create(bufferSize, initParticles.get(), GL_STATIC_DRAW);
+    particlesPrev = gl::Ssbo::create(bufferSize, initParticles.get(), GL_STATIC_DRAW);
     particlesSorted = gl::Ssbo::create(bufferSize, nullptr, GL_STATIC_DRAW);
   }
 }
 
 
-void ParticleSys::update(float time, const vec3 &viewDirection) {
+void ParticleSys::update(float time, uint32_t frameId, const vec3 &viewDirection) {
   if (particleUpdateProg) {
+    // std::swap(particles, particlesPrev);
+
     particles->bindBase(0);
+    particlesPrev->bindBase(1);
 
     particleUpdateProg->bind();
     particleUpdateProg->uniform("time", time);
+    particleUpdateProg->uniform("frameId", frameId);
 
     glDispatchCompute(kMaxParticles / kWorkGroupSizeX, 1, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
+    particlesPrev->unbindBase();
     particles->unbindBase();
   }
 

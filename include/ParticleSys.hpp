@@ -16,13 +16,13 @@ struct ParticleSys {
   gl::GlslProgRef particleUpdateProg, particleRenderProg;
   gl::VboRef particleIds;
   gl::VaoRef particleAttrs;
-  gl::SsboRef particles, particlesSorted;
+  gl::SsboRef particles, particlesPrev, particlesSorted;
 
   RadixSortRef radixSort;
 
   ParticleSys();
 
-  void update(float time, const vec3 &viewDirection);
+  void update(float time, uint32_t frameId, const vec3 &viewDirection);
   void draw(float pointSize);
 
   void loadUpdateShaderMain(const fs::path &filepath);

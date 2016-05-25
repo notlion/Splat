@@ -2,10 +2,16 @@
 
 #include "cinder/Vector.h"
 
+namespace splat {
+
+using namespace ci;
+
 #pragma pack(push, 1)
 struct Particle {
-  ci::vec3 position;
+  vec3 position;
   float scale;
-  ci::vec4 color;
+  vec4 color;
 };
 #pragma pack(pop)
+
+} // splat

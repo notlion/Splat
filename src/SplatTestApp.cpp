@@ -5,6 +5,7 @@
 #include "cinder/app/RendererGl.h"
 #include "cinder/gl/Ssbo.h"
 #include "cinder/gl/gl.h"
+#include "cinder/AxisAlignedBox.h"
 
 #include "3DConnexion.h"
 #include "Watchdog.h"
@@ -23,6 +24,8 @@ namespace splat {
 class SplatTestApp : public App {
   std::unique_ptr<ParticleSys> particleSys;
   fs::path particleUpdateMainFilepath;
+
+  AxisAlignedBox particleSysBounds;
 
   connexion::DeviceRef spaceNav;
 
@@ -58,9 +61,10 @@ void SplatTestApp::setup() {
     }
   }
 
+  particleSysBounds.set(vec3(-2.0f), vec3(2.0f));
+
   particleSys = std::make_unique<ParticleSys>();
   particleUpdateMainFilepath = getAssetPath("update_cs.glsl");
-  particleSys->loadUpdateShaderMain(particleUpdateMainFilepath);
 
   wd::watch(particleUpdateMainFilepath, [this](const fs::path &filepath) {
     CI_LOG_D("Reloading update shader: " << filepath);
@@ -96,7 +100,7 @@ void SplatTestApp::update() {
   cameraBody.step();
   cameraBody.applyTransform(camera);
 
-  particleSys->update(getElapsedSeconds(), camera.getViewDirection());
+  particleSys->update(getElapsedSeconds(), getElapsedFrames(), camera.getViewDirection());
 }
 
 void SplatTestApp::draw() {

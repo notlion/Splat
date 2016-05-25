@@ -26,5 +26,5 @@ void main() {
   color = particle[particleId].color;
 
   // TEMP: Slight fog
-  color.rgb *= 1.0 - gl_Position.z * 0.2;
+  // color.rgb *= 1.0 - gl_Position.z * 0.2;
 }
