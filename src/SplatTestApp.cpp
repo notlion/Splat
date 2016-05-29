@@ -100,13 +100,14 @@ void SplatTestApp::update() {
   cameraBody.step();
   cameraBody.applyTransform(camera);
 
-  particleSys->update(getElapsedSeconds(), getElapsedFrames(), camera.getViewDirection());
+  particleSys->update(getElapsedSeconds(), getElapsedFrames(), camera.getEyePoint(), camera.getViewDirection());
 }
 
 void SplatTestApp::draw() {
   gl::clear(Color(0, 0, 0));
 
-  gl::enableDepth(false);
+  gl::enableDepthRead(true);
+  gl::enableDepthWrite(false);
   gl::enableAlphaBlendingPremult();
   gl::enable(GL_PROGRAM_POINT_SIZE);
 

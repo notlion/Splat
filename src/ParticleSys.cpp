@@ -4,6 +4,7 @@
 #include "cinder/Rand.h"
 #include "cinder/Utilities.h"
 #include "cinder/app/App.h"
+#include "glm/gtx/extented_min_max.hpp"
 
 #include <numeric>
 
@@ -15,9 +16,13 @@ static constexpr uint32_t sqr(uint32_t x) {
 
 static const uint32_t kMaxParticles = sqr(2 << 9);
 static const uint32_t kWorkGroupSizeX = 128;
+static const uint32_t kVolumeGroupSizeXYZ = 8;
 
 
 ParticleSys::ParticleSys() {
+  volumeBounds.set(vec3(-2.0f), vec3(2.0f));
+  volumeRes = uvec3(64);
+
   radixSort = std::make_shared<RadixSort>(kMaxParticles, 128);
 
   {
@@ -56,19 +61,54 @@ ParticleSys::ParticleSys() {
     particlesPrev = gl::Ssbo::create(bufferSize, initParticles.get(), GL_STATIC_DRAW);
     particlesSorted = gl::Ssbo::create(bufferSize, nullptr, GL_STATIC_DRAW);
   }
+
+  {
+    auto fmt = gl::Texture3d::Format()
+                   .immutableStorage()
+                   .internalFormat(GL_R32UI)
+                   .minFilter(GL_NEAREST)
+                   .magFilter(GL_NEAREST);
+    // NOTE(ryan): Max mipmap level must be specified. Cinder will not automatically calculate for
+    // 3d textures. Probably a bug?
+    fmt.setMaxMipmapLevel(0);
+
+    densityTexture = gl::Texture3d::create(volumeRes.x, volumeRes.y, volumeRes.z, fmt);
+
+    fmt.setInternalFormat(GL_RGBA16F); // TODO(ryan): Maybe use GL_RGBA16_SNORM?
+    densityGradTexture = gl::Texture3d::create(volumeRes.x, volumeRes.y, volumeRes.z, fmt);
+  }
+
+  {
+    auto fmt = gl::GlslProg::Format().preprocess(true).define("WORK_GROUP_SIZE_X",
+                                                              std::to_string(kWorkGroupSizeX));
+    densityAccumProg = gl::GlslProg::create(fmt.compute(app::loadAsset("density_accum_cs.glsl")));
+  }
+
+  {
+    auto fmt = gl::GlslProg::Format().preprocess(true).define("WORK_GROUP_SIZE_XYZ",
+                                                              std::to_string(kVolumeGroupSizeXYZ));
+    densityGradProg = gl::GlslProg::create(fmt.compute(app::loadAsset("density_grad_cs.glsl")));
+  }
 }
 
 
-void ParticleSys::update(float time, uint32_t frameId, const vec3 &viewDirection) {
+void ParticleSys::update(float time, uint32_t frameId, const vec3 &eyePos, const vec3 &viewDir) {
   if (particleUpdateProg) {
     // std::swap(particles, particlesPrev);
-
-    particles->bindBase(0);
-    particlesPrev->bindBase(1);
 
     particleUpdateProg->bind();
     particleUpdateProg->uniform("time", time);
     particleUpdateProg->uniform("frameId", frameId);
+    particleUpdateProg->uniform("eyePos", eyePos);
+    particleUpdateProg->uniform("viewDir", viewDir);
+
+    particleUpdateProg->uniform("volumeBoundsMin", volumeBounds.getMin());
+    particleUpdateProg->uniform("volumeBoundsMax", volumeBounds.getMax());
+    particleUpdateProg->uniform("volumeRes", volumeRes);
+
+    particles->bindBase(0);
+    particlesPrev->bindBase(1);
+    glBindImageTexture(2, densityTexture->getId(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI);
 
     glDispatchCompute(kMaxParticles / kWorkGroupSizeX, 1, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -77,7 +117,40 @@ void ParticleSys::update(float time, uint32_t frameId, const vec3 &viewDirection
     particles->unbindBase();
   }
 
-  radixSort->sort(particles->getId(), particlesSorted->getId(), -viewDirection, -2.0f, 2.0f);
+  // NOTE(ryan): Accumulate particles into the density texture.
+  {
+    glClearTexImage(densityTexture->getId(), 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
+
+    densityAccumProg->bind();
+    densityAccumProg->uniform("boundsMin", volumeBounds.getMin());
+    densityAccumProg->uniform("oneOverBoundsSize", vec3(1.0f) / volumeBounds.getSize());
+
+    vec3 celSize = vec3(volumeBounds.getSize()) / vec3(volumeRes);
+    float celScale = glm::min(celSize.x, celSize.y, celSize.z);
+    densityAccumProg->uniform("oneOverCelScale", 1.0f / celScale);
+
+    particles->bindBase(0);
+    glBindImageTexture(1, densityTexture->getId(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI);
+
+    glDispatchCompute(kMaxParticles / kWorkGroupSizeX, 1, 1);
+    glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
+
+    particles->unbindBase();
+  }
+
+  // NOTE(ryan): Compute density gradients.
+  {
+    densityGradProg->bind();
+
+    glBindImageTexture(0, densityTexture->getId(), 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32UI);
+    glBindImageTexture(1, densityGradTexture->getId(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
+
+    glDispatchCompute(volumeRes.x / kVolumeGroupSizeXYZ, volumeRes.y / kVolumeGroupSizeXYZ,
+                      volumeRes.z / kVolumeGroupSizeXYZ);
+    glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
+  }
+
+  radixSort->sort(particles->getId(), particlesSorted->getId(), -viewDir, -2.0f, 2.0f);
 }
 
 void ParticleSys::draw(float pointSize) {
@@ -96,9 +169,8 @@ void ParticleSys::draw(float pointSize) {
 }
 
 void ParticleSys::loadUpdateShaderMain(const fs::path &filepath) {
-  auto src = loadString(app::loadAsset("step_cs.glsl"));
   auto fmt = gl::GlslProg::Format()
-                 .compute(src + "\n#include \"" + filepath.string() + "\"")
+                 .compute(loadFile(filepath))
                  .preprocess(true)
                  .define("WORK_GROUP_SIZE_X", std::to_string(kWorkGroupSizeX))
                  .define("PARTICLE_COUNT", std::to_string(kMaxParticles));
