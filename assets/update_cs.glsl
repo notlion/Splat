@@ -80,10 +80,9 @@ void main() {
         ivec3(id % volumeRes.x, (id / volumeRes.x) % volumeRes.x, id / (volumeRes.x * volumeRes.y));
     float d = float(imageLoad(volumeDensity, coord).r) / 1024.0;
 
-    vec3 uvw = vec3(coord) / vec3(volumeRes);
+    vec3 uvw = (vec3(coord) + 0.5) / vec3(volumeRes);
     particle[id].position = mix(volumeBoundsMin, volumeBoundsMax, uvw);
-    particle[id].color = vec4(d);
-    particle[id].color.r += 0.02;
+    particle[id].color = vec4(d, 0.0, 0.0, d);
     particle[id].scale = 5.0;
   } else {
     float t = float(id) / float(PARTICLE_COUNT);
@@ -92,21 +91,21 @@ void main() {
     vec3 vel = pos - particlePrev[id].position;
     particlePrev[id] = particle[id];
 
-    if (frameId % 2000 == 0) {
-      particlePrev[id].position = pos = randVec3(t) - 0.5;
+    if (true || frameId % 2000 == 0) {
+      particle[id].position = particlePrev[id].position = randVec3(t) + vec3(sin(time * 0.1), 0.0, 0.0);
+    } else {
+      vec3 scale = vec3(2.0, 2.01, 2.05);
+      vec3 q = scale * pos + kHashScale3 + vec3(time) * vec3(0.05, 0.07, 0.09);
+      vec3 dN = SimplexPerlin3D_Deriv(q).xyz + 0.7 * SimplexPerlin3D_Deriv(q * 5.01).xyz;
+      dN += -normalize(pos) * t * 0.0005;
+      vec3 v1 = dN; // vec3(dN.y - dN.z, dN.z - dN.x, dN.x - dN.y);
+
+      vel += v1 * 0.0001;
+
+      // vel += -normalize(pos) * t * 0.0005;
+
+      particle[id].position = pos + vel * mix(0.5, 0.8, t);
     }
-
-    vec3 scale = vec3(2.0, 2.01, 2.05);
-    vec3 q = scale * pos + kHashScale3 + vec3(time) * vec3(0.05, 0.07, 0.09);
-    vec3 dN = SimplexPerlin3D_Deriv(q).xyz + 0.7 * SimplexPerlin3D_Deriv(q * 5.01).xyz;
-    dN += -normalize(pos) * t * 0.0005;
-    vec3 v1 = dN; // vec3(dN.y - dN.z, dN.z - dN.x, dN.x - dN.y);
-
-    vel += v1 * 0.0001;
-
-    // vel += -normalize(pos) * t * 0.0005;
-
-    particle[id].position = pos + vel * mix(0.5, 0.8, t);
 
     // float wave = (sin(time + particle[id].position.z * kTwoPi * 0.5) + 1.0) * 0.5;
     // particle[id].color.rgb = pal(t, vec3(0.5, 0.5, 0.5), vec3(0.5, 0.5, 0.5), vec3(1.0, 1.0,
@@ -116,7 +115,7 @@ void main() {
     // float d = ramp(5.0, 2.0, viewDist);
     // c.rgb = pal(d, vec3(1.118,0.680,0.750), vec3(1.008,0.600,0.600), vec3(0.318,0.330,0.310),
     // vec3(-0.440,-0.447,-0.500));
-    c *= 0.05f;
+    c *= 0.025f;
 
     particle[id].color = c;
     particle[id].scale = 2.0;

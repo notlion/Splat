@@ -25,8 +25,6 @@ class SplatTestApp : public App {
   std::unique_ptr<ParticleSys> particleSys;
   fs::path particleUpdateMainFilepath;
 
-  AxisAlignedBox particleSysBounds;
-
   connexion::DeviceRef spaceNav;
 
   CameraPersp camera;
@@ -60,8 +58,6 @@ void SplatTestApp::setup() {
       });
     }
   }
-
-  particleSysBounds.set(vec3(-2.0f), vec3(2.0f));
 
   particleSys = std::make_unique<ParticleSys>();
   particleUpdateMainFilepath = getAssetPath("update_cs.glsl");
@@ -106,12 +102,17 @@ void SplatTestApp::update() {
 void SplatTestApp::draw() {
   gl::clear(Color(0, 0, 0));
 
-  gl::enableDepthRead(true);
+  gl::setMatrices(camera);
+
+  gl::enableDepth();
+  gl::disableAlphaBlending();
+  gl::color(ColorAf(0, 0, 1, 0.5f));
+  gl::bindStockShader(gl::ShaderDef().color());
+  gl::drawStrokedCube(particleSys->volumeBounds);
+
   gl::enableDepthWrite(false);
   gl::enableAlphaBlendingPremult();
   gl::enable(GL_PROGRAM_POINT_SIZE);
-
-  gl::setMatrices(camera);
 
   particleSys->draw(getWindowHeight() / 100.0f);
 }

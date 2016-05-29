@@ -23,7 +23,7 @@ void main() {
 
   ivec3 volumeRes = imageSize(volumeDensity);
   if (id >= volumeRes.x * volumeRes.y * volumeRes.z) {
-    ivec3 pos = ivec3((particle[id].position - boundsMin) * oneOverBoundsSize * volumeRes);
+    ivec3 pos = ivec3((particle[id].position - boundsMin) * oneOverBoundsSize * vec3(64.0));
     uint density = 1;//uint(particle[id].scale * oneOverCelScale * kMaxDensityPerParticle);
     // imageAtomicExchange(volumeDensity, pos, density);
     imageAtomicAdd(volumeDensity, pos, density);
