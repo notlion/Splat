@@ -94,20 +94,22 @@ void main() {
     vec3 vel = pos - particlePrev[id].position;
     particlePrev[id] = particle[id];
 
-    if (true || frameId % 2000 == 0) {
+    if (frameId % 2000 == 0) {
       vec3 p = randVec3(t);
       p *= mix(0.9, 1.0, hash11(t));
-      p += vec3(sin(time * 0.1), 0.0, 0.0);
+      //p += vec3(sin(time * 0.1), 0.0, 0.0);
       particle[id].position = particlePrev[id].position = p;
     } else {
       vec3 scale = vec3(2.0, 2.01, 2.05);
       vec3 q = scale * pos + kHashScale3 + vec3(time) * vec3(0.05, 0.07, 0.09);
       vec3 dN = SimplexPerlin3D_Deriv(q).xyz + 0.7 * SimplexPerlin3D_Deriv(q * 5.01).xyz;
       dN += -normalize(pos) * t * 0.0005;
-      vec3 v1 = dN;
-      //vec3 v1 = vec3(dN.y - dN.z, dN.z - dN.x, dN.x - dN.y);
+      //vec3 v1 = dN;
+      vec3 v1 = dN + vec3(dN.y - dN.z, dN.z - dN.x, dN.x - dN.y);
 
       vel += v1 * 0.0001;
+
+      vel += normalize(pos).yxx * vec3(1.0, -1.0, 0.0) * 0.001;
 
       // vel += -normalize(pos) * t * 0.0005;
 
@@ -125,6 +127,6 @@ void main() {
     c *= 0.025f;
 
     particle[id].color = c;
-    particle[id].scale = 0.0;
+    particle[id].scale = 2.0;
   }
 }

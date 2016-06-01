@@ -39,6 +39,15 @@
     <ClCompile Include="..\src\ParticleSys.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\deps\Cinder-ImGui\src\CinderImGui.cpp">
+      <Filter>Source Files\Deps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\deps\Cinder-ImGui\lib\imgui\imgui.cpp">
+      <Filter>Source Files\Deps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\deps\Cinder-ImGui\lib\imgui\imgui_draw.cpp">
+      <Filter>Source Files\Deps</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\Resources.h">

@@ -1,14 +1,15 @@
+#include "cinder/AxisAlignedBox.h"
 #include "cinder/Log.h"
 #include "cinder/Rand.h"
+#include "cinder/Utilities.h"
 #include "cinder/Vector.h"
 #include "cinder/app/App.h"
 #include "cinder/app/RendererGl.h"
 #include "cinder/gl/Ssbo.h"
 #include "cinder/gl/gl.h"
-#include "cinder/AxisAlignedBox.h"
-#include "cinder/Utilities.h"
 
 #include "3DConnexion.h"
+#include "CinderImGui.h"
 #include "Watchdog.h"
 
 #include "BodyCam.hpp"
@@ -32,6 +33,8 @@ class SplatTestApp : public App {
   Body3 cameraBody;
   vec3 cameraTranslation, cameraRotation;
 
+  std::string updateShaderError;
+
 public:
   void setup() override;
   void cleanup() override;
@@ -39,6 +42,8 @@ public:
   void update() override;
   void draw() override;
   void keyDown(KeyEvent event) override;
+
+  void updateGui();
 };
 
 
@@ -64,13 +69,15 @@ void SplatTestApp::setup() {
   particleUpdateMainFilepath = getAssetPath("update_cs.glsl");
 
   wd::watch(particleUpdateMainFilepath, [this](const fs::path &filepath) {
-    CI_LOG_D("Reloading update shader: " << filepath);
+    updateShaderError.clear();
     try {
       particleSys->loadUpdateShaderMain(filepath);
     } catch (const gl::GlslProgCompileExc &exc) {
-      CI_LOG_D(exc.what());
+      updateShaderError = exc.what();
     }
   });
+
+  ui::initialize(ui::Options().darkTheme());
 }
 
 void SplatTestApp::cleanup() {
@@ -97,8 +104,24 @@ void SplatTestApp::update() {
   cameraBody.step();
   cameraBody.applyTransform(camera);
 
-  particleSys->update(getElapsedSeconds(), getElapsedFrames(), camera.getEyePoint(), camera.getViewDirection());
+  particleSys->update(getElapsedSeconds(), getElapsedFrames(), camera.getEyePoint(),
+                      camera.getViewDirection());
+
+  updateGui();
 }
+
+void SplatTestApp::updateGui() {
+  ui::ScopedWindow scopedWindow("Hello");
+
+  if (ui::CollapsingHeader("Shader Status")) {
+    if (updateShaderError.empty()) {
+      ui::TextUnformatted("Compiled Successfully");
+    } else {
+      ui::TextUnformatted(updateShaderError.c_str());
+    }
+  }
+}
+
 
 void SplatTestApp::draw() {
   gl::clear(Color(0.0f, 0.0f, 0.0f));

@@ -4,3 +4,6 @@
 [submodule "deps/Watchdog"]
 	path = deps/Watchdog
 	url = https://github.com/simongeilfus/Watchdog.git
+[submodule "deps/Cinder-ImGui"]
+	path = deps/Cinder-ImGui
+	url = https://github.com/simongeilfus/Cinder-ImGui
