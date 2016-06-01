@@ -14,6 +14,7 @@ layout(std140, binding = 0) buffer ParticleBuffer {
 layout(r32ui, binding = 1) uniform uimage3D volumeDensity;
 
 uniform vec3 boundsMin, oneOverBoundsSize;
+uniform uvec3 volumeRes;
 uniform float oneOverCelScale;
 
 const uint kMaxDensityPerParticle = 1024;
@@ -21,11 +22,9 @@ const uint kMaxDensityPerParticle = 1024;
 void main() {
   uint id = gl_GlobalInvocationID.x;
 
-  ivec3 volumeRes = imageSize(volumeDensity);
   if (id >= volumeRes.x * volumeRes.y * volumeRes.z) {
-    ivec3 pos = ivec3((particle[id].position - boundsMin) * oneOverBoundsSize * vec3(64.0));
+    ivec3 pos = ivec3((particle[id].position - boundsMin) * oneOverBoundsSize * vec3(volumeRes));
     uint density = 1;//uint(particle[id].scale * oneOverCelScale * kMaxDensityPerParticle);
-    // imageAtomicExchange(volumeDensity, pos, density);
     imageAtomicAdd(volumeDensity, pos, density);
   }
 }

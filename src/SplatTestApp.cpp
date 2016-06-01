@@ -6,6 +6,7 @@
 #include "cinder/gl/Ssbo.h"
 #include "cinder/gl/gl.h"
 #include "cinder/AxisAlignedBox.h"
+#include "cinder/Utilities.h"
 
 #include "3DConnexion.h"
 #include "Watchdog.h"
@@ -100,7 +101,7 @@ void SplatTestApp::update() {
 }
 
 void SplatTestApp::draw() {
-  gl::clear(Color(0, 0, 0));
+  gl::clear(Color(0.0f, 0.0f, 0.0f));
 
   gl::setMatrices(camera);
 
@@ -109,12 +110,54 @@ void SplatTestApp::draw() {
   gl::color(ColorAf(0, 0, 1, 0.5f));
   gl::bindStockShader(gl::ShaderDef().color());
   gl::drawStrokedCube(particleSys->volumeBounds);
+  gl::drawCoordinateFrame(0.25f, 0.05f, 0.01f);
 
   gl::enableDepthWrite(false);
   gl::enableAlphaBlendingPremult();
   gl::enable(GL_PROGRAM_POINT_SIZE);
 
   particleSys->draw(getWindowHeight() / 100.0f);
+}
+
+
+static bool startsWith(const std::string &str, const std::string &prefix) {
+  if (str.length() < prefix.length() || str.empty() || prefix.empty()) return false;
+  size_t i = 0;
+  while (i < prefix.length() && str[i] == prefix[i]) ++i;
+  return i == prefix.length();
+}
+
+static int firstIndexOf(const std::string &str, char c) {
+  auto it = std::find(str.begin(), str.end(), c);
+  if (it == str.end()) return -1;
+  return it - str.begin();
+}
+
+static fs::path saveGrab(const Surface &surf, const fs::path &grabsDirPath) {
+  const std::string prefix = "grab_";
+  int topId = -1;
+
+  for (auto &p : fs::directory_iterator(grabsDirPath)) {
+    const auto &path = p.path();
+    const auto &filename = path.filename().string();
+
+    if (startsWith(filename, prefix)) {
+      int index = firstIndexOf(filename, '.');
+      if (index >= 0) {
+        try {
+          int id = boost::lexical_cast<int>(&filename[prefix.length()], index - prefix.length());
+          topId = std::max(topId, id);
+        } catch (const boost::bad_lexical_cast &exc) {
+        }
+      }
+    }
+  }
+
+  auto grabPath = grabsDirPath / (prefix + std::to_string(topId + 1) + ".png");
+  auto opts = ImageTarget::Options();
+  writeImage(grabPath, surf, opts);
+
+  return grabPath;
 }
 
 
@@ -126,6 +169,11 @@ void SplatTestApp::keyDown(KeyEvent event) {
         hideCursor();
       else
         showCursor();
+    } break;
+  }
+  switch (event.getChar()) {
+    case 's': {
+      saveGrab(copyWindowSurface(), getAppPath().parent_path() / "grabs");
     } break;
   }
 }

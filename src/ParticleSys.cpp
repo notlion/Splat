@@ -109,6 +109,7 @@ void ParticleSys::update(float time, uint32_t frameId, const vec3 &eyePos, const
     particles->bindBase(0);
     particlesPrev->bindBase(1);
     glBindImageTexture(2, densityTexture->getId(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI);
+    glBindImageTexture(3, densityGradTexture->getId(), 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA16F);
 
     glDispatchCompute(kMaxParticles / kWorkGroupSizeX, 1, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -122,6 +123,7 @@ void ParticleSys::update(float time, uint32_t frameId, const vec3 &eyePos, const
     glClearTexImage(densityTexture->getId(), 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
 
     densityAccumProg->bind();
+    densityAccumProg->uniform("volumeRes", volumeRes);
     densityAccumProg->uniform("boundsMin", volumeBounds.getMin());
     densityAccumProg->uniform("oneOverBoundsSize", vec3(1.0f) / volumeBounds.getSize());
 
@@ -141,6 +143,7 @@ void ParticleSys::update(float time, uint32_t frameId, const vec3 &eyePos, const
   // NOTE(ryan): Compute density gradients.
   {
     densityGradProg->bind();
+    densityGradProg->uniform("volumeRes", volumeRes);
 
     glBindImageTexture(0, densityTexture->getId(), 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32UI);
     glBindImageTexture(1, densityGradTexture->getId(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);

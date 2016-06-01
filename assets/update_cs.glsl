@@ -19,6 +19,7 @@ layout(std140, binding = 1) buffer ParticlePrevBuffer {
 };
 
 layout(r32ui, binding = 2) readonly uniform uimage3D volumeDensity;
+layout(rgba16f, binding = 3) readonly uniform image3D volumeDensityGrad;
 
 
 uniform float time;
@@ -78,11 +79,13 @@ void main() {
   if (id < volumeRes.x * volumeRes.y * volumeRes.z) {
     ivec3 coord =
         ivec3(id % volumeRes.x, (id / volumeRes.x) % volumeRes.x, id / (volumeRes.x * volumeRes.y));
-    float d = float(imageLoad(volumeDensity, coord).r) / 1024.0;
+    float d = float(imageLoad(volumeDensity, coord).r) / 256.0;
+
+    vec3 g = imageLoad(volumeDensityGrad, coord).xyz;
 
     vec3 uvw = (vec3(coord) + 0.5) / vec3(volumeRes);
     particle[id].position = mix(volumeBoundsMin, volumeBoundsMax, uvw);
-    particle[id].color = vec4(d, 0.0, 0.0, d);
+    particle[id].color = vec4(g * 0.01, 1.0) * d;
     particle[id].scale = 5.0;
   } else {
     float t = float(id) / float(PARTICLE_COUNT);
@@ -92,13 +95,17 @@ void main() {
     particlePrev[id] = particle[id];
 
     if (true || frameId % 2000 == 0) {
-      particle[id].position = particlePrev[id].position = randVec3(t) + vec3(sin(time * 0.1), 0.0, 0.0);
+      vec3 p = randVec3(t);
+      p *= mix(0.9, 1.0, hash11(t));
+      p += vec3(sin(time * 0.1), 0.0, 0.0);
+      particle[id].position = particlePrev[id].position = p;
     } else {
       vec3 scale = vec3(2.0, 2.01, 2.05);
       vec3 q = scale * pos + kHashScale3 + vec3(time) * vec3(0.05, 0.07, 0.09);
       vec3 dN = SimplexPerlin3D_Deriv(q).xyz + 0.7 * SimplexPerlin3D_Deriv(q * 5.01).xyz;
       dN += -normalize(pos) * t * 0.0005;
-      vec3 v1 = dN; // vec3(dN.y - dN.z, dN.z - dN.x, dN.x - dN.y);
+      vec3 v1 = dN;
+      //vec3 v1 = vec3(dN.y - dN.z, dN.z - dN.x, dN.x - dN.y);
 
       vel += v1 * 0.0001;
 
@@ -118,6 +125,6 @@ void main() {
     c *= 0.025f;
 
     particle[id].color = c;
-    particle[id].scale = 2.0;
+    particle[id].scale = 0.0;
   }
 }
