@@ -1,10 +1,6 @@
 #version 430 core
 
-struct Particle {
-  vec3 position;
-  float scale;
-  vec4 color;
-};
+#include "utils/particle.glsl"
 
 layout(local_size_x = WORK_GROUP_SIZE_X) in;
 

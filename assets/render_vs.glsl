@@ -1,13 +1,9 @@
 #version 430 core
 
-uniform mat4 ciModelView, ciProjectionMatrix;
-uniform float pointSize;
+#include "utils/particle.glsl"
 
-struct Particle {
-  vec3 position;
-  float scale;
-  vec4 color;
-};
+uniform mat4 ciModelViewProjection;
+uniform float pointSize;
 
 layout(location = 0) in uint particleId;
 layout(std140, binding = 0) buffer Particles {
@@ -17,14 +13,7 @@ layout(std140, binding = 0) buffer Particles {
 out vec4 color;
 
 void main() {
-  vec4 viewPos = ciModelView * vec4(particle[particleId].position, 1.0);
-  float viewDist = length(viewPos.xyz);
-
-  gl_PointSize = (pointSize / viewDist) * particle[particleId].scale;
-  gl_Position = ciProjectionMatrix * viewPos;
-
   color = particle[particleId].color;
-
-  // TEMP: Slight fog
-  // color.rgb *= 1.0 - gl_Position.z * 0.2;
+  gl_Position = ciModelViewProjection * vec4(particle[particleId].position, 1.0);
+  gl_PointSize = (pointSize * particle[particleId].scale) / gl_Position.w;
 }

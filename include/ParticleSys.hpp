@@ -20,7 +20,7 @@ struct ParticleSys {
   gl::SsboRef particles, particlesPrev, particlesSorted;
 
   gl::Texture3dRef densityTexture, densityGradTexture;
-  gl::GlslProgRef densityAccumProg, densityGradProg;
+  gl::GlslProgRef densityAccumProg, densityGradProg, densityDebugRenderProg;
 
   RadixSortRef radixSort;
 
