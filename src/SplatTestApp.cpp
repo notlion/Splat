@@ -14,6 +14,7 @@
 
 #include "BodyCam.hpp"
 #include "ParticleSys.hpp"
+#include "Utils.hpp"
 
 
 using namespace ci;
@@ -34,6 +35,7 @@ class SplatTestApp : public App {
   vec3 cameraTranslation, cameraRotation;
 
   std::string updateShaderError;
+  bool renderDebugGraphics = false;
 
 public:
   void setup() override;
@@ -77,7 +79,7 @@ void SplatTestApp::setup() {
     }
   });
 
-  ui::initialize(ui::Options().darkTheme());
+  ui::initialize(ui::Options().autoRender(false));
 }
 
 void SplatTestApp::cleanup() {
@@ -110,12 +112,18 @@ void SplatTestApp::update() {
   updateGui();
 }
 
+
 void SplatTestApp::updateGui() {
+  ui::NewFrame();
   ui::ScopedWindow scopedWindow("Hello");
+
+  if (ui::CollapsingHeader("Display")) {
+    ui::Checkbox("Render Debug Graphics", &renderDebugGraphics);
+  }
 
   if (ui::CollapsingHeader("Shader Status")) {
     if (updateShaderError.empty()) {
-      ui::TextUnformatted("Compiled Successfully");
+      ui::TextUnformatted("Compile Successful");
     } else {
       ui::TextUnformatted(updateShaderError.c_str());
     }
@@ -128,59 +136,25 @@ void SplatTestApp::draw() {
 
   gl::setMatrices(camera);
 
-  gl::enableDepth();
-  gl::disableAlphaBlending();
-  gl::color(ColorAf(0, 0, 1, 0.5f));
-  gl::bindStockShader(gl::ShaderDef().color());
-  gl::drawStrokedCube(particleSys->volumeBounds);
-  gl::drawCoordinateFrame(0.25f, 0.05f, 0.01f);
+  if (renderDebugGraphics) {
+    gl::enableDepth();
+    gl::disableAlphaBlending();
+    gl::color(ColorAf(0, 0, 1, 0.5f));
+    gl::bindStockShader(gl::ShaderDef().color());
+    gl::drawStrokedCube(particleSys->volumeBounds);
+    gl::drawCoordinateFrame(0.25f, 0.05f, 0.01f);
+  }
 
-  gl::enableDepthWrite(false);
+  gl::enableDepthRead();
+  gl::disableDepthWrite();
   gl::enableAlphaBlendingPremult();
   gl::enable(GL_PROGRAM_POINT_SIZE);
 
   particleSys->draw(getWindowHeight() / 100.0f);
-}
 
-
-static bool startsWith(const std::string &str, const std::string &prefix) {
-  if (str.length() < prefix.length() || str.empty() || prefix.empty()) return false;
-  size_t i = 0;
-  while (i < prefix.length() && str[i] == prefix[i]) ++i;
-  return i == prefix.length();
-}
-
-static int firstIndexOf(const std::string &str, char c) {
-  auto it = std::find(str.begin(), str.end(), c);
-  if (it == str.end()) return -1;
-  return it - str.begin();
-}
-
-static fs::path saveGrab(const Surface &surf, const fs::path &grabsDirPath) {
-  const std::string prefix = "grab_";
-  int topId = -1;
-
-  for (auto &p : fs::directory_iterator(grabsDirPath)) {
-    const auto &path = p.path();
-    const auto &filename = path.filename().string();
-
-    if (startsWith(filename, prefix)) {
-      int index = firstIndexOf(filename, '.');
-      if (index >= 0) {
-        try {
-          int id = boost::lexical_cast<int>(&filename[prefix.length()], index - prefix.length());
-          topId = std::max(topId, id);
-        } catch (const boost::bad_lexical_cast &exc) {
-        }
-      }
-    }
+  if (!isFullScreen()) {
+    ui::Render();
   }
-
-  auto grabPath = grabsDirPath / (prefix + std::to_string(topId + 1) + ".png");
-  auto opts = ImageTarget::Options();
-  writeImage(grabPath, surf, opts);
-
-  return grabPath;
 }
 
 

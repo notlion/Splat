@@ -66,8 +66,8 @@ ParticleSys::ParticleSys() {
     auto fmt = gl::Texture3d::Format()
                    .immutableStorage()
                    .internalFormat(GL_R32UI)
-                   .minFilter(GL_NEAREST)
-                   .magFilter(GL_NEAREST);
+                   .minFilter(GL_LINEAR)
+                   .magFilter(GL_LINEAR);
     // NOTE(ryan): Max mipmap level must be specified. Cinder will not automatically calculate for
     // 3d textures. Probably a bug?
     fmt.setMaxMipmapLevel(0);
@@ -93,9 +93,12 @@ ParticleSys::ParticleSys() {
 
 
 void ParticleSys::update(float time, uint32_t frameId, const vec3 &eyePos, const vec3 &viewDir) {
-  if (particleUpdateProg) {
-    // std::swap(particles, particlesPrev);
+  mat4 worldToVolumeMtx = glm::translate(glm::scale(vec3(volumeRes) / vec3(volumeBounds.getSize())),
+                                         -volumeBounds.getMin());
+  mat4 worldToUnitVolumeMtx =
+      glm::translate(glm::scale(vec3(1.0f) / vec3(volumeBounds.getSize())), -volumeBounds.getMin());
 
+  if (particleUpdateProg) {
     particleUpdateProg->bind();
     particleUpdateProg->uniform("time", time);
     particleUpdateProg->uniform("frameId", frameId);
@@ -105,6 +108,10 @@ void ParticleSys::update(float time, uint32_t frameId, const vec3 &eyePos, const
     particleUpdateProg->uniform("volumeBoundsMin", volumeBounds.getMin());
     particleUpdateProg->uniform("volumeBoundsMax", volumeBounds.getMax());
     particleUpdateProg->uniform("volumeRes", volumeRes);
+    particleUpdateProg->uniform("worldToUnitVolumeMtx", worldToUnitVolumeMtx);
+
+    particleUpdateProg->uniform("densityGradTex", 0);
+    gl::ScopedTextureBind scopedDensityGradTex(densityGradTexture, 0);
 
     particles->bindBase(0);
     particlesPrev->bindBase(1);
@@ -124,8 +131,9 @@ void ParticleSys::update(float time, uint32_t frameId, const vec3 &eyePos, const
 
     densityAccumProg->bind();
     densityAccumProg->uniform("volumeRes", volumeRes);
-    densityAccumProg->uniform("boundsMin", volumeBounds.getMin());
-    densityAccumProg->uniform("oneOverBoundsSize", vec3(1.0f) / volumeBounds.getSize());
+    densityAccumProg->uniform("worldToVolumeMtx", worldToVolumeMtx);
+    // densityAccumProg->uniform("boundsMin", volumeBounds.getMin());
+    // densityAccumProg->uniform("oneOverBoundsSize", vec3(1.0f) / volumeBounds.getSize());
 
     vec3 celSize = vec3(volumeBounds.getSize()) / vec3(volumeRes);
     float celScale = glm::min(celSize.x, celSize.y, celSize.z);

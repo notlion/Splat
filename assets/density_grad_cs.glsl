@@ -8,10 +8,8 @@ layout(rgba16f, binding = 1) writeonly uniform image3D gradientImg;
 
 uniform uvec3 volumeRes;
 
-const uint kMaxDensityPerParticle = 1024;
-
 ivec3 clampToVol(in ivec3 c) {
-  return clamp(c + ivec3(1, 0, 0), ivec3(0), ivec3(volumeRes - 1));
+  return clamp(c, ivec3(0), ivec3(volumeRes - 1));
 }
 
 void main() {
@@ -24,10 +22,7 @@ void main() {
   float ny = float(imageLoad(densityImg, clampToVol(c - ivec3(0, 1, 0))).r);
   float nz = float(imageLoad(densityImg, clampToVol(c - ivec3(0, 0, 1))).r);
 
-  float v = float(imageLoad(densityImg, c).r);
-
   vec3 grad = vec3(px - nx, py - ny, pz - nz);
-  // vec3 grad = vec3((px - v) + (v - nx), (py - v) + (v - ny), (pz - v) + (v - nz));
 
   imageStore(gradientImg, c, vec4(grad, 0.0));
 }
