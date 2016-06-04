@@ -27,6 +27,8 @@ struct ParticleSys {
   AxisAlignedBox volumeBounds;
   uvec3 volumeRes;
 
+  bool shaderInit, shaderCompile;
+
   ParticleSys();
 
   void update(float time, uint32_t frameId, const vec3 &eyePos, const vec3 &viewDirection);

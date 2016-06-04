@@ -13,18 +13,17 @@ layout(std140, binding = 1) buffer ParticlePrevBuffer {
   Particle particlePrev[];
 };
 
-layout(r32ui, binding = 2) readonly uniform uimage3D volumeDensity;
-layout(rgba16f, binding = 3) readonly uniform image3D volumeDensityGrad;
-
-
 uniform float time;
 uniform uint frameId;
 uniform vec3 eyePos, viewDir;
+
+uniform bool init, compile;
 
 uniform vec3 volumeBoundsMin, volumeBoundsMax;
 uniform uvec3 volumeRes;
 uniform mat4 worldToUnitVolumeMtx;
 
+uniform usampler3D densityTex;
 uniform sampler3D densityGradTex;
 
 
@@ -82,19 +81,24 @@ void main() {
 
   vec3 pos = particle[id].position;
   vec3 vel = pos - particlePrev[id].position;
+  vel *= 0.9;
   particlePrev[id] = particle[id];
 
-  vec3 dg = texture(densityGradTex, worldToVolumeTexcoord(pos)).xyz;
+  vec3 texcoord = worldToVolumeTexcoord(pos);
+  vec3 dg = texture(densityGradTex, texcoord).xyz;
+  float d = float(texture(densityTex, texcoord).r);
 
   const float cycleDuration = 500.0;
   int age = int(mod(t * cycleDuration - float(frameId), cycleDuration));
-  age = int(frameId) % 100;
+  // age = int(frameId) % 100;
 
-  if (age == 0) {
-    vec3 p = randVec3(t) * 0.75;
-    //p *= mix(0.9, 1.0, hash11(t));
-    //p.x += sin(time) * 0.1;
-    particle[id].position = particlePrev[id].position = p;
+  if (init || age == 0 || any(greaterThan(texcoord, vec3(1.0))) ||
+      any(lessThan(texcoord, vec3(0.0)))) {
+    vec3 p = randVec3(t) * 0.5;
+    // p *= mix(0.9, 1.0, hash11(t));
+    // p.x += sin(time) * 0.1;
+    particle[id].position = p;
+    particlePrev[id].position = p; // - vec3(0.1, 0.0, 0.0);
   } else {
     vec3 scale = vec3(2.0, 2.01, 2.05);
     vec3 q = scale * pos + kHashScale3 + vec3(time) * vec3(0.05, 0.07, 0.09);
@@ -103,14 +107,14 @@ void main() {
     vec3 v1 = dN;
     // vec3 v1 = dN + vec3(dN.y - dN.z, dN.z - dN.x, dN.x - dN.y);
 
-    //vel += v1 * 0.0001;
+    // vel += v1 * 0.0001;
 
-    vel -= dg * 0.0001;
-    //vel += normalize(pos).yxx * vec3(1.0, -1.0, 0.0) * 0.001;
+    vel -= dg * 0.00001;
+    // vel += normalize(pos).yxx * vec3(1.0, -1.0, 0.0) * 0.001;
 
     // vel += -normalize(pos) * t * 0.0005;
 
-    particle[id].position = pos + vel * 0.5;//mix(0.5, 0.8, t);
+    particle[id].position = pos + vel; // mix(0.5, 0.8, t);
   }
 
   // float wave = (sin(time + particle[id].position.z * kTwoPi * 0.5) + 1.0) * 0.5;
@@ -130,5 +134,5 @@ void main() {
   c *= 0.25f;
 
   particle[id].color = c;
-  particle[id].scale = 2.0;//fract(time / 5.0) > 0.5 ? 2.0 : 0.0;
+  particle[id].scale = 2.0; // fract(time / 5.0) > 0.5 ? 2.0 : 0.0;
 }

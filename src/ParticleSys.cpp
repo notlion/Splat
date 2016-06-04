@@ -19,7 +19,7 @@ static const uint32_t kWorkGroupSizeX = 128;
 static const uint32_t kVolumeGroupSizeXYZ = 8;
 
 
-ParticleSys::ParticleSys() {
+ParticleSys::ParticleSys() : shaderInit(true) {
   volumeBounds.set(vec3(-2.0f), vec3(2.0f));
   volumeRes = uvec3(64);
 
@@ -53,7 +53,7 @@ ParticleSys::ParticleSys() {
   {
     auto initParticles = std::unique_ptr<Particle[]>(new Particle[kMaxParticles]);
     for (size_t i = 0; i < kMaxParticles; ++i) {
-      initParticles[i] = {Rand::randVec3(), 1.0f, vec4(1.0)};
+      initParticles[i] = {vec3(0.0f), 1.0f, vec4(0.0f)}; // Rand::randVec3(), 1.0f, vec4(1.0)
     }
 
     auto bufferSize = kMaxParticles * sizeof(Particle);
@@ -105,24 +105,30 @@ void ParticleSys::update(float time, uint32_t frameId, const vec3 &eyePos, const
     particleUpdateProg->uniform("eyePos", eyePos);
     particleUpdateProg->uniform("viewDir", viewDir);
 
+    particleUpdateProg->uniform("init", shaderInit);
+    particleUpdateProg->uniform("compile", shaderCompile);
+
     particleUpdateProg->uniform("volumeBoundsMin", volumeBounds.getMin());
     particleUpdateProg->uniform("volumeBoundsMax", volumeBounds.getMax());
     particleUpdateProg->uniform("volumeRes", volumeRes);
     particleUpdateProg->uniform("worldToUnitVolumeMtx", worldToUnitVolumeMtx);
 
     particleUpdateProg->uniform("densityGradTex", 0);
+    particleUpdateProg->uniform("densityTex", 1);
     gl::ScopedTextureBind scopedDensityGradTex(densityGradTexture, 0);
+    gl::ScopedTextureBind scopedDensityTex(densityTexture, 1);
 
     particles->bindBase(0);
     particlesPrev->bindBase(1);
-    glBindImageTexture(2, densityTexture->getId(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI);
-    glBindImageTexture(3, densityGradTexture->getId(), 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA16F);
 
     glDispatchCompute(kMaxParticles / kWorkGroupSizeX, 1, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     particlesPrev->unbindBase();
     particles->unbindBase();
+
+    shaderInit = false;
+    shaderCompile = false;
   }
 
   // NOTE(ryan): Accumulate particles into the density texture.
@@ -188,6 +194,7 @@ void ParticleSys::loadUpdateShaderMain(const fs::path &filepath) {
   auto updateProg = gl::GlslProg::create(fmt);
 
   particleUpdateProg = updateProg;
+  shaderCompile = true;
 }
 
 } // splat

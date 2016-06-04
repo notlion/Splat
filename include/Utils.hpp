@@ -2,6 +2,7 @@
 
 #include "cinder/Filesystem.h"
 #include "cinder/Surface.h"
+#include "cinder/gl/GlslProg.h"
 
 namespace splat {
 
