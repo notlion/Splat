@@ -15,7 +15,7 @@ layout(std140, binding = 1) buffer ParticlePrevBuffer {
 
 uniform float time;
 uniform uint frameId;
-uniform vec3 eyePos, viewDir;
+uniform vec3 eyePos, eyeVel, viewDir;
 
 uniform bool init, compile;
 
@@ -81,22 +81,31 @@ void main() {
 
   vec3 pos = particle[id].position;
   vec3 vel = pos - particlePrev[id].position;
-  vel *= 0.9;
+  vel *= 0.6;
   particlePrev[id] = particle[id];
 
   vec3 texcoord = worldToVolumeTexcoord(pos);
   vec3 dg = texture(densityGradTex, texcoord).xyz;
   float d = float(texture(densityTex, texcoord).r);
 
-  const float cycleDuration = 500.0;
+  float h11t = hash11(t);
+
+  const float cycleDuration = 700.0;
   int age = int(mod(t * cycleDuration - float(frameId), cycleDuration));
   // age = int(frameId) % 100;
 
-  if (init || age == 0 || any(greaterThan(texcoord, vec3(1.0))) ||
-      any(lessThan(texcoord, vec3(0.0)))) {
-    vec3 p = randVec3(t) * 0.5;
-    // p *= mix(0.9, 1.0, hash11(t));
-    // p.x += sin(time) * 0.1;
+  bool flotsam = t < 0.025;
+  bool spawn =
+      init || age == 0 ||
+      (!flotsam && (any(greaterThan(texcoord, vec3(1.0))) || any(lessThan(texcoord, vec3(0.0)))));
+
+  if (spawn) {
+    vec3 p;
+    if (flotsam) {
+      p = randVec3(t) * h11t * 4.0;
+    } else {
+      p = randVec3(t) * mix(0.5, flotsam ? 5.0 : 0.8, h11t);
+    }
     particle[id].position = p;
     particlePrev[id].position = p; // - vec3(0.1, 0.0, 0.0);
   } else {
@@ -104,12 +113,17 @@ void main() {
     vec3 q = scale * pos + kHashScale3 + vec3(time) * vec3(0.05, 0.07, 0.09);
     vec3 dN = SimplexPerlin3D_Deriv(q).xyz + 0.7 * SimplexPerlin3D_Deriv(q * 5.01).xyz;
     dN += -normalize(pos) * t * 0.0005;
-    vec3 v1 = dN;
-    // vec3 v1 = dN + vec3(dN.y - dN.z, dN.z - dN.x, dN.x - dN.y);
+    // vec3 v1 = dN;
+    vec3 v1 = dN + vec3(dN.y - dN.z, dN.z - dN.x, dN.x - dN.y);
 
-    // vel += v1 * 0.0001;
+    vel += v1 * 0.00005;
 
-    vel -= dg * 0.00001;
+    vec3 eyeDir = pos - eyePos;
+    float eyePow = smoothstep(0.4, 0.0, length(eyeDir));
+    eyeDir = normalize(eyeDir);
+    vel += max(0.0, dot(eyeDir, eyeVel)) * eyeDir * eyePow;
+
+    // vel -= dg * 0.00001;
     // vel += normalize(pos).yxx * vec3(1.0, -1.0, 0.0) * 0.001;
 
     // vel += -normalize(pos) * t * 0.0005;
@@ -126,13 +140,22 @@ void main() {
   // c.rgb = pal(d, vec3(1.118,0.680,0.750), vec3(1.008,0.600,0.600), vec3(0.318,0.330,0.310),
   // vec3(-0.440,-0.447,-0.500));
 
-  c.rgb = dg * 0.05;
+  c.rgb = dg * 0.005;
   // float a = time * 0.1;
   // c.rgb = vec3(clamp(dot(normalize(dg), vec3(sin(a), cos(a), 0.0)), 0.0, 1.0));
   c.a = 1.0;
 
   c *= 0.25f;
+  c.g *= 0.25;
 
-  particle[id].color = c;
-  particle[id].scale = 2.0; // fract(time / 5.0) > 0.5 ? 2.0 : 0.0;
+  float s;
+  if (flotsam) {
+    c = vec4(0.1);
+    s = mix(1.0, 2.0, h11t);
+  } else {
+    s = mix(1.0, 4.0, h11t);
+  }
+
+  particle[id].color = spawn ? vec4(0.0) : c;
+  particle[id].scale = s; // fract(time / 5.0) > 0.5 ? 2.0 : 0.0;
 }

@@ -106,8 +106,8 @@ void SplatTestApp::update() {
   cameraBody.step();
   cameraBody.applyTransform(camera);
 
-  particleSys->update(getElapsedSeconds(), getElapsedFrames(), camera.getEyePoint(),
-                      camera.getViewDirection());
+  particleSys->update(getElapsedSeconds(), getElapsedFrames(), cameraBody.position,
+                      cameraBody.position - cameraBody.positionPrev, camera.getViewDirection());
 
   updateGui();
 }

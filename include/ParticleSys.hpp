@@ -3,9 +3,9 @@
 #include "Particle.hpp"
 #include "Sort.hpp"
 
+#include "cinder/AxisAlignedBox.h"
 #include "cinder/Filesystem.h"
 #include "cinder/gl/gl.h"
-#include "cinder/AxisAlignedBox.h"
 
 namespace splat {
 
@@ -31,7 +31,8 @@ struct ParticleSys {
 
   ParticleSys();
 
-  void update(float time, uint32_t frameId, const vec3 &eyePos, const vec3 &viewDirection);
+  void update(float time, uint32_t frameId, const vec3 &eyePos, const vec3 &eyeVel,
+              const vec3 &viewDirection);
   void draw(float pointSize);
 
   void loadUpdateShaderMain(const fs::path &filepath);

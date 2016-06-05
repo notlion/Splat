@@ -92,7 +92,8 @@ ParticleSys::ParticleSys() : shaderInit(true) {
 }
 
 
-void ParticleSys::update(float time, uint32_t frameId, const vec3 &eyePos, const vec3 &viewDir) {
+void ParticleSys::update(float time, uint32_t frameId, const vec3 &eyePos, const vec3 &eyeVel,
+                         const vec3 &viewDir) {
   mat4 worldToVolumeMtx = glm::translate(glm::scale(vec3(volumeRes) / vec3(volumeBounds.getSize())),
                                          -volumeBounds.getMin());
   mat4 worldToUnitVolumeMtx =
@@ -103,6 +104,7 @@ void ParticleSys::update(float time, uint32_t frameId, const vec3 &eyePos, const
     particleUpdateProg->uniform("time", time);
     particleUpdateProg->uniform("frameId", frameId);
     particleUpdateProg->uniform("eyePos", eyePos);
+    particleUpdateProg->uniform("eyeVel", eyeVel);
     particleUpdateProg->uniform("viewDir", viewDir);
 
     particleUpdateProg->uniform("init", shaderInit);
