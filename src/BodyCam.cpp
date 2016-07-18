@@ -25,6 +25,11 @@ void Body3::step() {
   }
 }
 
+void Body3::stopAt(const Camera &camera) {
+  position = positionPrev = camera.getEyePoint();
+  orientation = orientationPrev = camera.getOrientation();
+}
+
 void Body3::applyTransform(ci::Camera &camera) {
   camera.setEyePoint(position);
   camera.setOrientation(orientation);

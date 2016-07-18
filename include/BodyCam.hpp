@@ -21,5 +21,7 @@ struct Body3 {
 
   void step();
 
+  void stopAt(const ci::Camera &camera);
+
   void applyTransform(ci::Camera &camera);
 };

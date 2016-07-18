@@ -46,14 +46,18 @@ public:
   void keyDown(KeyEvent event) override;
 
   void updateGui();
+  void resetCamera();
 };
 
 
-void SplatTestApp::setup() {
+void SplatTestApp::resetCamera() {
   camera.setEyePoint(vec3(0.0f, 0.0f, -5.0f));
   camera.setViewDirection(vec3(0.0f, 0.0f, 1.0f));
+  cameraBody.stopAt(camera);
+}
 
-  cameraBody = Body3(camera);
+void SplatTestApp::setup() {
+  resetCamera();
 
   {
     connexion::Device::initialize(getRenderer()->getHwnd());
@@ -64,6 +68,8 @@ void SplatTestApp::setup() {
         cameraTranslation = event.translation;
         cameraRotation = event.rotation;
       });
+      spaceNav->getButtonDownSignal().connect(
+          [this](const connexion::ButtonDownEvent &event) { resetCamera(); });
     }
   }
 

@@ -81,7 +81,7 @@ void main() {
 
   vec3 pos = particle[id].position;
   vec3 vel = pos - particlePrev[id].position;
-  vel *= 0.6;
+  vel *= 0.7;
   particlePrev[id] = particle[id];
 
   vec3 texcoord = worldToVolumeTexcoord(pos);
@@ -90,7 +90,7 @@ void main() {
 
   float h11t = hash11(t);
 
-  const float cycleDuration = 700.0;
+  const float cycleDuration = 2000.0;
   int age = int(mod(t * cycleDuration - float(frameId), cycleDuration));
   // age = int(frameId) % 100;
 
@@ -102,9 +102,9 @@ void main() {
   if (spawn) {
     vec3 p;
     if (flotsam) {
-      p = randVec3(t) * h11t * 4.0;
+      p = randVec3(t) * sqrt(h11t) * 4.0;
     } else {
-      p = randVec3(t) * mix(0.5, flotsam ? 5.0 : 0.8, h11t);
+      p = randVec3(t) * mix(0.5, 0.8, h11t);
     }
     particle[id].position = p;
     particlePrev[id].position = p; // - vec3(0.1, 0.0, 0.0);
@@ -116,7 +116,7 @@ void main() {
     // vec3 v1 = dN;
     vec3 v1 = dN + vec3(dN.y - dN.z, dN.z - dN.x, dN.x - dN.y);
 
-    vel += v1 * 0.00005;
+    vel += v1 * 0.00001;
 
     vec3 eyeDir = pos - eyePos;
     float eyePow = smoothstep(0.4, 0.0, length(eyeDir));
